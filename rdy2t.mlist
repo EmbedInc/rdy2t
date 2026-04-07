@@ -1,0 +1,13 @@
+rdy2t_cmds.o
+rdy2t_cmdusb.o
+rdy2t_init.o
+rdy2t_intr.o
+rdy2t_main.o
+rdy2t_name.o
+rdy2t_port.o
+rdy2t_prom.o
+rdy2t_regs.o
+rdy2t_stack.o
+rdy2t_task.o
+rdy2t_usb.o
+rdy2t_usb0.o

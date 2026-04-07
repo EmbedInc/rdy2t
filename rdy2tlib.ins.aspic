@@ -1,0 +1,36 @@
+;   ***************************************************************
+;   * Copyright (C) 2008, Embed Inc (http://www.embedinc.com)     *
+;   *                                                             *
+;   * Permission to copy this file is granted as long as this     *
+;   * copyright notice is included in its entirety at the         *
+;   * beginning of the file, whether the file is copied in whole  *
+;   * or in part and regardless of whether other information is   *
+;   * added to the copy.                                          *
+;   *                                                             *
+;   * The contents of this file may be used in any way,           *
+;   * commercial or otherwise.  This file is provided "as is",    *
+;   * and Embed Inc makes no claims of suitability for a          *
+;   * particular purpose nor assumes any liability resulting from *
+;   * its use.                                                    *
+;   ***************************************************************
+;
+;   This include file sets up the environment for the RDY2T firmware.
+;
+/const   picname = [evar "PICTYPE"] ;specific PIC model, from BUILD_VAR script
+/const   fwname  = "rdy2t"   ;name of this project
+/const   srcdir  = "qprot"   ;top level SOURCE directory name
+/const   buildname = "rdy2t" ;name of subdirectory within top level SOURCE dir
+/const   fwtype  integer = 76 ;unique ID for this firmware
+
+/include "(cog)src/pic/std_def.ins.aspic"
+/include "(cog)src/pic/fwtype.ins.aspic"
+;
+;   Set configuration for the standard routines and macros.  The stack
+;   location and size has been set to default by the STD_DEF include
+;   file, and can be customized before the STD include file.
+;
+/const   freq_osc real = 48.0e6 ;CPU oscillator frequency in Hz
+stacklast set    h'60'
+stacksize set    64
+
+/include "(cog)src/pic/std.ins.aspic"

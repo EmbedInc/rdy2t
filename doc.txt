@@ -1,0 +1,135 @@
+                           Embed RDY2T Firmware
+                               7 April 2026
+
+This firmware runs in a Microchip PIC 18F2550 on an Embed ReadyBoard-02.
+It is intended as a template for custom firmware for the ReadyBoard.
+
+
+USB Protocol
+
+  The ENAB_USB switch must be set in the main include file
+  (RDY2T.INS.ASPIC) for USB communication to be enabled.  The USB
+  command/response protocol is not implemented when ENAB_USB is set to
+  FALSE.  When enabled (with ENAB_USB build switch), the device enumerates
+  over the USB as:
+
+    VID 5824
+    PID 1481
+
+  Both endpoints 0 (in and out) are reserved exclusively for use by the
+  operating system and host device driver.  Both directions use the
+  control transfer mode as required by the USB spec.
+
+  Endpoints 1 are reserved for application use.  Both directions use the
+  bulk transfer mode with a buffer size of 64 bytes.  The ping-pong buffer
+  mode of the SIE hardware is used.  Since two buffers must be considered
+  in use by the SIE at any time, three buffers are used per endpoint so
+  that one is always available for the software to drain (OUT endpoint) or
+  fill (IN endpoint).
+
+  The application protocol (via pipe 1) wraps data in packets in each
+  direction.  Each packet starts with an opcode byte, which may then be
+  followed by additional bytes as defined by that opcode.  Packets from
+  the host to the device are referred to as "commands", and packets from
+  the device to the host are referred to as "responses", although
+  responses may not always be sent in direct response to a command.
+
+  In the command and response descriptions below, each data item is an
+  unsigned 8 bit byte unless otherwise specified.  Multi-byte values are
+  transferred in most to least significant byte order unless otherwise
+  specified.
+
+  All command and response opcodes not listed below are reserved, and may
+  be implemented in future versions of the firmware.  Unused command
+  opcode bytes are ignored, but this should not be relied on since they
+  may have meaning in future versions.
+
+
+Commands
+
+  NOP: 0
+
+    This command is ignored.  This is the only opcode guaranteed to be
+    ignored since reserved opcodes may be implemented in other versions of
+    this firwmware.
+
+  PING: 1
+
+    Causes the PONG response to be sent.
+
+  FWVER: 2
+
+    Sends a FWVER response, which identifies the firmware type and
+    version.
+
+  NAMESET: 3 n string
+
+    Sets the non-volatile name of the unit.  N is the number of characters
+    in the name, and STRING the name characters.  There must be exactly N
+    characters in STRING.
+
+  NAMEGET: 4
+
+    Sends the NAME response, which indicates the unit's non-volatile name.
+
+  GETCMDS: 5
+
+    Requests the CMDS response, which indicates the set of implemented
+    commands.
+
+
+Responses
+
+  NOP: 0
+
+    This response must always be ignored by the host.  There is no
+    guarantee that a device will ever send this response, but the host
+    must tolerate it whenever the start of a new response is expected.
+
+  PONG: 1
+
+    Sent in response to the PING command.
+
+  FWVER: 2 type version sequence
+
+    Identifies the device firmware.
+
+    TYPE is the type ID of the firmware, which is 76 for the RDY2T
+    firmware.
+
+    VERSION is the 1-255 firmware version number.  This number is used to
+    identify different versions in the "Firmware Versions" section
+    (below).
+
+    SEQUENCE is a arbitrary number that is unique for every build of the
+    firmware with the same TYPE and VERSION.  Only one build of each
+    TYPE/VERSION is released.  The sequence number of the released build
+    of each version is given in the "Firmware Versions" section of this
+    document.  Builds with other than the released sequence number can not
+    be relied on to follow the device's specification.
+
+  NAME: 3 n string
+
+    Indicates the non volatile name of the unit.  N is the number of
+    characters in the name.  Exactly N characters follow N.
+
+  CMDS: 4 dat0 ... dat31
+
+    Indicates the complete set of implemented commands.  Sent in response
+    to GETCMDS command.
+
+    1 bit is sent for each possible 0-255 command opcode.  The commands
+    are in least to most significant bit order within each DATn byte.  The
+    DAT0 byte is for commands 0-7, DAT1 for commands 8-15, etc.  Exactly
+    32 data bytes are always sent.  A 1 bit for a command indicates that
+    the command is implemented, and a 0 bit that it is not.  Unimplmented
+    command opcodes are ignore by the command processor.
+
+
+Firmware versions
+
+  RDY2T 1 seq 57, 7 Apr 2026
+
+    USB communication enabled.  Implements commands NOP, PING, FWINFO,
+    NAMESET, NAMEGET, GETCMDS.  Implments responses NOP, PING, FWINFO,
+    NAME, CMDS.

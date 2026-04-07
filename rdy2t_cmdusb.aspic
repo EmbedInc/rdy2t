@@ -1,0 +1,102 @@
+;   ***************************************************************
+;   * Copyright (C) 2011, Embed Inc (http://www.embedinc.com)     *
+;   *                                                             *
+;   * Permission to copy this file is granted as long as this     *
+;   * copyright notice is included in its entirety at the         *
+;   * beginning of the file, whether the file is copied in whole  *
+;   * or in part and regardless of whether other information is   *
+;   * added to the copy.                                          *
+;   *                                                             *
+;   * The contents of this file may be used in any way,           *
+;   * commercial or otherwise.  This file is provided "as is",    *
+;   * and Embed Inc makes no claims of suitability for a          *
+;   * particular purpose nor assumes any liability resulting from *
+;   * its use.                                                    *
+;   ***************************************************************
+;
+;   USB command processor.  The routines in this module interpret and process
+;   the command stream coming from the host computer via the USB.
+;
+;   This module requires the global definitions in the CMDUSB_SETUP.INS.ASPIC
+;   file.
+;
+;   The opcodes of individual commands and responses are defined in the
+;   fwname_CMDRSP.INS.ASPIC file, which should be included from the main project
+;   include file.  The code in this module is automatically customized to create
+;   the dispatch table from the command opcode definitions.
+;
+;   Most command routines are in the CMDS module.  This module can include code
+;   for commands that do not exist as long as they are wrapped in preprocessor
+;   conditional statements that only include the code for a command when that
+;   command opcode is defined.  See the CMDS module for a detailed description
+;   of command routine requirements and example of command routines.
+;
+;   This module launches its own task to process commands.  The Embed tasking
+;   system for PIC 18 is required.  See the TASK module.
+;
+;   The routines exported by this module are:
+;
+;     CMD_INIT
+;
+;       Initialize the state managed by this module.  This must be the first
+;       call into this module.
+;
+;     CMD_GET8
+;     CMD_GET16
+;     CMD_GET24
+;     CMD_GET32
+;
+;       Routines to get 1, 2, 3, or 4 command stream bytes as a whole integer
+;       value.  Multi-byte values are assumed to be transmitted in most to least
+;       significant order.  The integer value is written into the low bits of
+;       RES3:REG2:REG1:REG0.  Unused high bytes are not altered.  For example,
+;       CMD_GET16 gets the next two command stream bytes as a 16 bit integer
+;       into REG1:REG0, with no other registers altered.
+;
+;     CMD_LOCK_OUT
+;
+;       Acquire the exclusive lock on sending response bytes to the host.
+;
+;     CMD_UNLOCK_OUT
+;
+;       Release the lock on sending response bytes to the host.
+;
+;     CMD_PUT8
+;     CMD_PUT16
+;     CMD_PUT24
+;     CMD_PUT32
+;
+;       Send 1, 2, 3, and 4 byte integers over the response stream to the host.
+;       The sending lock must be held by the caller.  The integer value of the
+;       indicated size is taken from the low bits of REG3:REG2:REG1:REG0.  For
+;       example CMD_PUT16 sends the integer value in REG1:REG0 with the
+;       remaining registers irrelevant.  Multi-byte values are sent in most to
+;       least significant order.
+;
+;     CMD_START
+;
+;       Start command processing.  A new task is launched that processes
+;       commands in an infinite loop.
+;
+;   USB code automatically sets flag USBRESET when a USB reset is detected.
+;   This is the only app interface for getting notified about a USB reset.  The
+;   application may need to do other things than just resetting the command
+;   processor on a USB reset.  In that case, USBRESET should be a condition
+;   handled in the main event loop, which then sets CMDRESET as one of its
+;   tasks.  If the only response to a USB reset is to reset the command
+;   processor, then the USBRESET flag can be used here directly.  That is done
+;   by setting USE_USBRESET to TRUE.
+;
+/include "rdy2t.ins.aspic"
+
+;*******************************************************************************
+;
+;   Configuration settings.
+;
+/const   use_usbreset bool = false ;use CMDRESET flag, not USBRESET directly
+/const   cmdpref string = "cmd_" ;start of command opcode symbol names
+stacksz  equ     64          ;size of command processor data stack
+lbank    equ     0           ;register bank for the local state of this module
+
+/include "(cog)src/pic/cmdusb.ins.aspic"
+         end

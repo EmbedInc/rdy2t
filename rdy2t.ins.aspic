@@ -1,0 +1,111 @@
+;   ***************************************************************
+;   * Copyright (C) 2008, Embed Inc (http://www.embedinc.com)     *
+;   *                                                             *
+;   * Permission to copy this file is granted as long as this     *
+;   * copyright notice is included in its entirety at the         *
+;   * beginning of the file, whether the file is copied in whole  *
+;   * or in part and regardless of whether other information is   *
+;   * added to the copy.                                          *
+;   *                                                             *
+;   * The contents of this file may be used in any way,           *
+;   * commercial or otherwise.  This file is provided "as is",    *
+;   * and Embed Inc makes no claims of suitability for a          *
+;   * particular purpose nor assumes any liability resulting from *
+;   * its use.                                                    *
+;   ***************************************************************
+;
+;   Include file for the RDY2T PIC application.
+;
+;   This application is meant to be a template for firmware that runs on a Embed
+;   ReadyBoard-02.
+;
+/include "rdy2tlib.ins.aspic"
+
+;*******************************************************************************
+;
+;   Built-in feature enable/disable switches.
+;
+/const   enab_usb bool = true ;USB communication, command/response protocol
+;
+;   Application configuration parameters
+;
+/const   ntasks  integer = 4 ;maximum number of tasks supported
+/const   namemaxlen integer = 40 ;max supported device name string length
+gbankadr equ     0           ;adr within globals bank (access bank on PIC18)
+
+tsksave  set     0           ;build the mask of registers for TASK_YIELD to save
+tsksave  set     tsksave | regf0
+tsksave  set     tsksave | regf1
+tsksave  set     tsksave | regf2
+tsksave  set     tsksave | regf3
+tsksave  set     tsksave | regf4
+tsksave  set     tsksave | regf5
+tsksave  set     tsksave | regf6
+tsksave  set     tsksave | regf7
+;
+;   Derived constants.
+;
+/include "(cog)src/pic/cmdusb_setup.ins.aspic"
+/include "(cog)src/pic/prom_setup.ins.aspic"
+/include "(cog)src/pic/task_setup.ins.aspic"
+/include "(cog)src/pic/usb_setup.ins.aspic"
+/include "rdy2t_cmdrsp.ins.aspic"
+/include "rdy2t_usb.ins.aspic"
+
+;**********
+;
+;   Non-volatile memory allocation.  Each of the NVADR_xxx symbols is the offset
+;   of a particular piece of non-volatile state from the beginning of the
+;   non-volatile memory.
+;
+;   Fixed allocation of the NV mem is performed here instead of letting the
+;   linker place individual pieces of state so that consistancy is maintained
+;   between firmware versions.  To the extent possible, newer firmware versions
+;   should use the same NV mem state in the same locations as previous versions.
+;   This at least makes it possible for non-volatile settings to be preserved
+;   for some types of firmware updates, such as bootloads.  Note that this
+;   comment does not guarantee any such mechanisms are actually implemented.
+;
+  cblock 0
+         nvadr_name:1        ;start of device name, length byte
+         nvadr_namechars:[v namemaxlen] ;the name string characters
+    endc
+
+;**********
+;
+;   Global 1-bit flags private to this firmware.  Some flags may have already
+;   been defined in the xxx_SETUP.INS.ASPIC library files, included above.
+;   Global flags are defined with the /FLAG preprocessor command.  See the
+;   PREPIC doc file for details.
+;
+
+;**********
+;
+;   I/O pin declarations.
+;
+;   The ports are initialized in the PORT module according to the I/O
+;   bit definitions here.
+;
+/outbit  ra0     porta 0
+/outbit  ra1     porta 1
+/outbit  ra2     porta 2
+/outbit  ra3     porta 3
+/outbit  ra4     porta 4
+/outbit  ra5     porta 5
+
+/outbit  rb0     portb 0
+/outbit  rb1     portb 1
+/outbit  rb2     portb 2
+/outbit  rb3     portb 3
+/outbit  rb4     portb 4     ;pushbutton
+/outbit  rb5     portb 5     ;pushbutton, PGM, 910 kOhm to ground
+/outbit  rb6     portb 6     ;pushbutton, PGC during programming/debugging
+/outbit  rb7     portb 7     ;pushbutton, PGD during programming/debugging
+
+/outbit  rc0     portc 0
+/outbit  rc1     portc 1
+/outbit  rc2     portc 2
+/outbit  rc4     portc 4     ;USBD-
+/outbit  rc5     portc 5     ;USBD+
+/outbit  rc6     portc 6     ;optional serial TX
+/outbit  rc7     portc 7     ;optional serial RX

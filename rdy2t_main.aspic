@@ -1,0 +1,119 @@
+;   ***************************************************************
+;   * Copyright (C) 2005, Embed Inc (http://www.embedinc.com)     *
+;   *                                                             *
+;   * Permission to copy this file is granted as long as this     *
+;   * copyright notice is included in its entirety at the         *
+;   * beginning of the file, whether the file is copied in whole  *
+;   * or in part and regardless of whether other information is   *
+;   * added to the copy.                                          *
+;   *                                                             *
+;   * The contents of this file may be used in any way,           *
+;   * commercial or otherwise.  This file is provided "as is",    *
+;   * and Embed Inc makes no claims of suitability for a          *
+;   * particular purpose nor assumes any liability resulting from *
+;   * its use.                                                    *
+;   ***************************************************************
+;
+;   This module contains the main application routine that is run after the
+;   system is initialized.
+;
+/include "rdy2t.ins.aspic"
+
+         extern  tick10ms    ;incremented every 10 ms
+         extern_flags        ;declare global flag bits EXTERN
+
+;*******************************************************************************
+;
+;   Configuration constants.
+;
+lbank    equ     0           ;register bank for the local state of this module
+;
+;   Derived constants.
+;
+lbankadr equ     bankadr(lbank) ;address within local state register bank
+
+;*******************************************************************************
+;
+;   Global state.  All this state is assumed to be in the GBANK register bank by
+;   other modules.
+;
+         defram  gbankadr
+
+
+;*******************************************************************************
+;
+;   Local state.
+;
+         defram  lbankadr
+
+/if enab_usb then
+usb10ms  res     1           ;10 ms clock USB is up to date with
+  /endif
+
+
+.main    code
+;*******************************************************************************
+;
+;   Routine MAIN
+;
+;   This entry point is jumped to from the INIT module, once system
+;   initialization is complete.
+;
+         glbent  main
+
+;**********
+;
+;   Initialize the state managed by this module.
+;
+/if enab_usb then
+         movff   tick10ms, usb10ms ;init clock USB routines are up to date with
+  /endif
+
+;**********
+;
+;   Main application loop.  Back here to look for something to do.  Whenever
+;   something is found that needs handling, a handler routine is jumped to.  All
+;   handler routines jump back to LOOP_MAIN when done.  This means events are
+;   checked in priority order, with high priority events checked earlier.
+;
+         glbent  loop_main
+         gcall   task_yield  ;give all other tasks a chance to run
+;
+;   Handle USB reset.
+;
+/if enab_usb then
+         dbankif gbankadr
+         skip_flag usbreset
+         jump    no_usbreset
+
+         clrflag usbreset    ;clear the event condition
+         setflag cmdreset    ;tell the command processor to reset itself
+no_usbreset
+  /endif
+;
+;   Notify the USB routines of any new elapsed time.  This is used to detect
+;   wedged USB hardware, in which case the processor is reset.
+;
+/if enab_usb then
+         dbankif gbankadr
+         movf    tick10ms, w ;get the current 10 ms clock tick counter
+         dbankif lbankadr
+         xorwf   usb10ms, w  ;compare to value USB is up to date with
+         bz      d_usbtick   ;no more clock ticks for USB this iteration ?
+         ;
+         ;   There is a new clock tick.
+         ;
+         dbankif lbankadr
+         incf    usb10ms     ;update clock value now current with
+         loadk8  reg0, 10    ;pass number of ms elapsed
+         gcall   usb_tick    ;notify USB routines of new elapsed time
+         jump    loop_main
+
+d_usbtick unbank             ;done with clock ticks for USB routines
+  /endif
+;
+;   Go back and check all events again.
+;
+         jump    loop_main
+
+         end
