@@ -293,6 +293,14 @@ rsp_bitsam_k: begin
     datar_add (ibyte);
     end;
 
+  jj := string_fifo_nempty (rdy.bitsam.fifo_p^); {get room in FIFO}
+  jj := min(datarn, jj);               {number of runs can write to FIFO now}
+  for ii := 1 to jj do begin           {once for each run to write to the FIFO}
+    string_fifo_put (                  {write this run to the FIFO}
+      rdy.bitsam.fifo_p^,              {the FIFO}
+      datar[ii - 1]);                  {the data byte to write}
+    end;                               {back to write next run to the FIFO}
+
   if rdy.show_rsp then begin
     rdy2_show_lock (rdy);
     write ('Bit samples:');

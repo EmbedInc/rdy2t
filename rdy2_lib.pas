@@ -170,6 +170,12 @@ begin
   rdy_p^.stline := true;               {init to user output is at start of line}
   rdy_p^.fwinfo_call_p := nil;
   rdy_p^.fwinfo_app := 0;
+
+  string_fifo_create (                 {create FIFO for live bit sample runs}
+    rdy_p^.mem_p^,                     {parent memory context}
+    rdy2_bitsam_sz,                    {max bytes FIFO can hold}
+    rdy_p^.bitsam.fifo_p);             {returned pointer to the new FIFO}
+  rdy_p^.bitsam.inv := false;          {init to not invert bit sample data}
 {
 *   Start the thread that receives and processes the response stream from the
 *   remote unit.
@@ -215,6 +221,7 @@ abort4:
   sys_event_del_bool (rdy_p^.inexit);  {delete thread exit event}
 
 abort3:                                {user output writing lock created}
+  string_fifo_delete (rdy_p^.bitsam.fifo_p); {delete the bit sample runs FIFO}
   sys_thread_lock_delete (rdy_p^.show_lock, stat); {delete user output mutex}
 
 abort2:                                {sending mutex and PONG event created}
@@ -254,6 +261,7 @@ begin
   sys_thread_lock_delete (rdy_p^.lock_out, stat); {delete sending mutex}
   sys_event_del_bool (rdy_p^.pong);    {delete event for PONG response}
   sys_thread_lock_delete (rdy_p^.show_lock, stat); {delete user output mutex}
+  string_fifo_delete (rdy_p^.bitsam.fifo_p); {delete the bit sample runs FIFO}
 
   mem_p := rdy_p^.mem_p;               {make local copy of pointer to mem context}
   util_mem_context_del (mem_p);        {delete mem context, release dyn mem}

@@ -7,4 +7,5 @@ rem
 setlocal
 call build_pasinit
 
+src_progl bitsam
 src_progl test_rdy2

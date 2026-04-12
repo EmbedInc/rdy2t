@@ -16,6 +16,7 @@ const
 }
   rdy2_obuf_size = 64;                 {size of output buffer to remote sys, bytes}
   rdy2_waitsec = 3.0;                  {max seconds to wait for response from remote sys}
+  rdy2_bitsam_sz = 1024;               {max runs live bit sample FIFO can hold}
 {
 *   Derived constants.
 }
@@ -28,6 +29,11 @@ type
     rdy2_open_shnop_k,                 {show NOP response, with consecutive count}
     rdy2_open_shrsp_k);                {show interpreted received responses}
   rdy2_open_t = set of rdy2_open_k_t;  {all flags in one set}
+
+  rdy2_bitsam_t = record               {state related to live bit sampling feature}
+    fifo_p: string_fifo_p_t;           {FIFO of same-value runs}
+    inv: boolean;                      {invert the sampled 0/1 data}
+    end;
 
   rdy2_p_t = ^rdy2_t;
   rdy2_t = record                      {state for one use of this library}
@@ -51,6 +57,7 @@ type
     stline: boolean;                   {user output position is at start of line}
     fwinfo_call_p: univ_ptr;           {to routine to call after FWINFO response}
     fwinfo_app: sys_int_adr_t;         {app-specific argument to FWINFO callback}
+    bitsam: rdy2_bitsam_t;             {state for optional BITSAM feature}
     inexit: sys_sys_event_id_t;        {signalled when input thread exits}
     end;
 
@@ -63,6 +70,21 @@ type
 *
 *   Entry points.
 }
+procedure rdy2_bitsam_clear (          {clear any existing bit sampled data}
+  in out  rdy: rdy2_t);                {library use state}
+  val_param; extern;
+
+procedure rdy2_bitsam_polarity (       {set reported polarity of live bit samples}
+  in out  rdy: rdy2_t;                 {library use state}
+  in      pos: boolean);               {TRUE high 1 low 0, FALSE opposite}
+  val_param; extern;
+
+procedure rdy2_bitsam_run (            {get next sampled bit run}
+  in out  rdy: rdy2_t;                 {library use state}
+  out     bit: sys_int_machine_t;      {bit value, 0 or 1, after polarity applied}
+  out     len: sys_int_machine_t);     {number of consecutive samples of this value}
+  val_param; extern;
+
 procedure rdy2_callback_fwinfo (       {install callback routine for FWINFO response}
   in out  rdy: rdy2_t;                 {library use state}
   in      call_p: rdy2_fwinfo_call_p_t; {to routine to call on FWINFO resp, NIL = none}
