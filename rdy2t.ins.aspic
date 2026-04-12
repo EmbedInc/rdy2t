@@ -26,12 +26,34 @@
 ;   Built-in feature enable/disable switches.
 ;
 /const   enab_usb bool = true ;USB communication, command/response protocol
+/const   enab_uart bool = false ;UART I/O
+/const   enab_bitsam bool = true ;live input bit sampling
 ;
 ;   Application configuration parameters
 ;
 /const   ntasks  integer = 4 ;maximum number of tasks supported
 /const   namemaxlen integer = 40 ;max supported device name string length
 gbankadr equ     0           ;adr within globals bank (access bank on PIC18)
+;
+;   Configuration for optional BITSAM feature.
+;
+/const   bitsam_port string = "B" ;port containing input pin to sample
+/const   bitsam_bit integer = 0 ;bit within port of input pin to sample
+
+/if enab_usb then
+  /outbit usbdn portc 4      ;USBD-
+  /outbit usbdp portc 5      ;USBD+
+  /endif
+
+/if enab_uart then
+  /outbit tx portc 6 n       ;serial transmit
+  /inbit rx portc 7 n        ;serial receive
+  /endif
+
+/if enab_bitsam then
+  /inbit bitsam port[chars [lcase bitsam_port]] [v bitsam_bit]
+  /flag bitsam               ;live sampling is enabled
+  /endif
 
 tsksave  set     0           ;build the mask of registers for TASK_YIELD to save
 tsksave  set     tsksave | regf0
@@ -83,29 +105,33 @@ tsksave  set     tsksave | regf7
 ;
 ;   I/O pin declarations.
 ;
-;   The ports are initialized in the PORT module according to the I/O
-;   bit definitions here.
+;   Pins with functions used by optionally enabled mechanism are defined above.
 ;
-/outbit  ra0     porta 0
-/outbit  ra1     porta 1
-/outbit  ra2     porta 2
-/outbit  ra3     porta 3
-/outbit  ra4     porta 4
-/outbit  ra5     porta 5
+;   Define all the remaining pins to the generic names and as outputs driven
+;   low.
+;
+/call AssignPin A 0
+/call AssignPin A 1
+/call AssignPin A 2
+/call AssignPin A 3
+/call AssignPin A 4
+/call AssignPin A 5
 
-/outbit  rb0     portb 0
-/outbit  rb1     portb 1
-/outbit  rb2     portb 2
-/outbit  rb3     portb 3
-/outbit  rb4     portb 4     ;pushbutton
-/outbit  rb5     portb 5     ;pushbutton, PGM, 910 kOhm to ground
-/outbit  rb6     portb 6     ;pushbutton, PGC during programming/debugging
-/outbit  rb7     portb 7     ;pushbutton, PGD during programming/debugging
+/call AssignPin B 0
+/call AssignPin B 1
+/call AssignPin B 2
+/call AssignPin B 3
+/call AssignPin B 4          ;pushbutton
+/call AssignPin B 5          ;pushbutton, PGM, 910 kOhm to ground
+/call AssignPin B 6          ;pushbutton, PGC during programming and debugging
+/call AssignPin B 7          ;pushbutton, PGD during programming and debugging
 
-/outbit  rc0     portc 0
-/outbit  rc1     portc 1
-/outbit  rc2     portc 2
-/outbit  rc4     portc 4     ;USBD-
-/outbit  rc5     portc 5     ;USBD+
-/outbit  rc6     portc 6     ;optional serial TX
-/outbit  rc7     portc 7     ;optional serial RX
+/call AssignPin C 0
+/call AssignPin C 1
+/call AssignPin C 2
+/call AssignPin C 4
+/call AssignPin C 5
+/call AssignPin C 6
+/call AssignPin C 7
+
+/call check_pin_err          ;verify no pin conflicts

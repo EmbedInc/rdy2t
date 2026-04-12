@@ -10,6 +10,7 @@ const
 }
   rdy2_subsys_k = -89;                 {RDY2 library subsystem ID}
   rdy2_err_noresp_k = 1;               {no response from the remote system}
+  rdy2_cmd_nimpl_k = 2;                {command not implemented}
 {
 *   Configuration constants.
 }
@@ -68,6 +69,12 @@ procedure rdy2_callback_fwinfo (       {install callback routine for FWINFO resp
   in      arg: sys_int_adr_t);         {app-specific parameter to callback routine}
   val_param; extern;
 
+procedure rdy2_cmd_bitsam (            {send BITSAM command}
+  in out  rdy: rdy2_t;                 {library use state}
+  in      on: boolean;                 {switch the feature on}
+  out     stat: sys_err_t);            {completion status}
+  val_param; extern;
+
 procedure rdy2_cmd_fwinfo (            {send FWINFO command}
   in out  rdy: rdy2_t;                 {library use state}
   out     stat: sys_err_t);            {completion status}
@@ -103,6 +110,14 @@ function rdy2_cmdimpl (                {check for command implemented}
   in out  rdy: rdy2_t;                 {library use state}
   in      cmd: sys_int_machine_t)      {0-255 command opcode}
   :boolean;                            {the command is implemented in this firmware}
+  val_param; extern;
+
+function rdy2_err_cmdnimpl (           {set error status iff command unimplemented}
+  in out  rdy: rdy2_t;                 {library use state}
+  in      name: string;                {command name}
+  in      opc: sys_int_machine_t;      {0-255 command opcode}
+  out     stat: sys_err_t)             {set to unimplemented command or no error}
+  :boolean;                            {the command is unimplemented}
   val_param; extern;
 
 procedure rdy2_lib_close (             {end RDY2 lib use, release resources}

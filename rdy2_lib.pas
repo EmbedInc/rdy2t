@@ -133,7 +133,7 @@ var
   ii: sys_int_machine_t;               {scratch integer and loop counter}
 
 label
-  abort1, abort2, abort3;
+  abort1, abort2, abort3, abort4;
 
 begin
   ioopen := false;                     {init to I/O connection to unit not open}
@@ -164,8 +164,8 @@ begin
   if sys_error(stat) then goto abort2;
   rdy_p^.show_in := rdy2_open_shin_k in opt;
   rdy_p^.show_out := rdy2_open_shout_k in opt;
-  rdy_p^.show_nop := rdy2_open_shnop_k in opt;
-  rdy_p^.show_rsp := rdy2_open_shrsp_k in opt;
+  rdy_p^.show_nop := false;            {init showing responses to off for now}
+  rdy_p^.show_rsp := false;
   rdy_p^.show_pong := rdy_p^.show_rsp;
   rdy_p^.stline := true;               {init to user output is at start of line}
   rdy_p^.fwinfo_call_p := nil;
@@ -192,11 +192,28 @@ begin
     sys_wait (0.500);                  {give thread time to react to closed I/O}
     goto abort3;
     end;
+{
+*   Send initial commands the result of which are needed for the library to
+*   function correctly.
+}
+  rdy2_cmd_fwinfo (rdy_p^, stat);      {get firmware version info}
+  if sys_error(stat) then goto abort4;
+  rdy2_cmd_getcmds (rdy_p^, stat);     {get list of implemented commands}
+  if sys_error(stat) then goto abort4;
 
+  rdy2_send_wait (rdy_p^, stat);       {send all commands, wait for done}
+  if sys_error(stat) then goto abort4;
+
+  rdy_p^.show_nop := rdy2_open_shnop_k in opt; {set showing responses according to caller}
+  rdy_p^.show_rsp := rdy2_open_shrsp_k in opt;
+  rdy_p^.show_pong := rdy_p^.show_rsp;
   return;                              {new lib use created, normal return point}
 {
 *   Error exits.  STAT must already be set to indicate the error.
 }
+abort4:
+  sys_event_del_bool (rdy_p^.inexit);  {delete thread exit event}
+
 abort3:                                {user output writing lock created}
   sys_thread_lock_delete (rdy_p^.show_lock, stat); {delete user output mutex}
 

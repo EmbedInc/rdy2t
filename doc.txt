@@ -1,5 +1,5 @@
                            Embed RDY2T Firmware
-                               7 April 2026
+                              12 April 2026
 
 This firmware runs in a Microchip PIC 18F2550 on an Embed ReadyBoard-02.
 It is intended as a template for custom firmware for the ReadyBoard.
@@ -77,6 +77,18 @@ Commands
     Sends the CMDS response, which indicates the set of implemented
     commands.
 
+  BITSAM: 6 on
+
+    Enable or disable live bit sampling.  When enabled, an input pin is
+    regularly sampled and asynchronous BITSAM responses sent to report the
+    samples.
+
+    ON of 1 enables bit sampling, and 0 disables it.  All other values are
+    reserved and their effect undefined.
+
+    This command only exists when the BITSAM mechanism is enabled by the
+    ENAB_BITSAM build time switch.
+
 
 Responses
 
@@ -125,6 +137,24 @@ Responses
     the command is implemented, and a 0 bit that it is not.  Unimplmented
     command opcodes are ignore by the firmware.
 
+  BITSAM: 5 n run ... run
+
+    Reports a sequence of input pin samples.
+
+    The data is runlength compressed.  Each RUN byte indicates one run of
+    the same value. The high bit of each RUN byte indicates the bit value.
+    The low 7 bits are the number of sequential samples of that bit value
+    - 1.  For example, the value 83h means that the input bit was high on
+    4 consecutive samples.
+
+    N is the number of RUN bytes to follow - 1.  For example, N of 3 means
+    that 4 RUN bytes will follow.
+
+    This response is sent asynchronously when BITSAM is enbled (see BITSAM
+    command).
+
+    This version of the firmware samples the RB0 pin every 100 us.
+
 
 Firmware versions
 
@@ -133,3 +163,32 @@ Firmware versions
     USB communication enabled.  Implements commands NOP, PING, FWINFO,
     NAMESET, NAMEGET, GETCMDS.  Implements responses NOP, PING, FWINFO,
     NAME, CMDS.
+
+  RDY2T 2 seq 28, 12 Apr 2026
+
+    Added optional BITSAM feature.  Added command BITSAM, response BITSAM.
+
+    Optional features: USB BITSAM
+
+          .REGS: 000-010, length    17, type UDATA
+     .udata_acs: 011-019, length     9, type UDATA
+                 01A-05F, length    70
+         .STACK: 060-09F, length    64, type UDATA
+         .BANK0: 0A0-0A4, length     5, type UDATA
+     .TASK3CTRL: 0A5-0E9, length    69, type UDATA
+                 0EA-0FF, length    22
+
+         .BANK1: 100-127, length    40, type UDATA
+     .TASK2CTRL: 128-16C, length    69, type UDATA
+     .TASK1CTRL: 16D-1B1, length    69, type UDATA
+     .TASK0CTRL: 1B2-1F6, length    69, type UDATA
+                 1F7-1FF, length     9
+
+         .BANK2: 200-222, length    35, type UDATA
+      .CMDSTACK: 223-262, length    64, type UDATA
+    .BITSAM_RAM: 263-288, length    38, type UDATA
+                 289-3FF, length   375
+
+         .USBBD: 400-455, length    86, type UDATA
+        .USBBUF: 456-605, length   432, type UDATA
+                 606-7FF, length   506

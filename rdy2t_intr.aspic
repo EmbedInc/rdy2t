@@ -278,11 +278,20 @@ intr_high_cont unbank
 ;
 intr_timer2 dbankis pir1
          bcf     pir1, tmr2if ;clear the interrupt condition
+
+/if enab_bitsam then
+         skip_flag bitsam    ;live bit sampling is on ?
+         jump    d_bitsam    ;no, skip this section
+         extern  bitsam_intr
+         gjump   bitsam_intr ;sample the input bit
+         glbent  bitsam_intr_done ;sample routine returns to here
+d_bitsam unbank
+  /endif
 ;
 ;   Update the global clock tick counters.
 ;
          dbankif gbankadr
-         decfsz  cnt1ms      ;one less inter until 1 ms tick
+         decfsz  cnt1ms      ;one less interrupt until 1 ms tick
          jump    d_ticks     ;no new 1 ms tick this interrupt ?
          incf    tick1ms     ;update global 1 ms tick counter
          loadk8  cnt1ms, [v intrms] ;reset interrupts until next 1 ms tick

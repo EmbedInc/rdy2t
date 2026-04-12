@@ -5,6 +5,7 @@ rem
 setlocal
 call build_fwinit
 
+call src_aspic %srcdir% %fwname%_bitsam
 call src_aspic %srcdir% %fwname%_cmds
 call src_aspic %srcdir% %fwname%_cmdusb
 call src_aspic %srcdir% %fwname%_init

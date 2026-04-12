@@ -10,4 +10,29 @@
 ;
 /include "rdy2t.ins.aspic"
 /include "(cog)src/pic/port.ins.aspic"
+
+/call show_pin A 0
+/call show_pin A 1
+/call show_pin A 2
+/call show_pin A 3
+/call show_pin A 4
+/call show_pin A 5
+
+/call show_pin B 0
+/call show_pin B 1
+/call show_pin B 2
+/call show_pin B 3
+/call show_pin B 4
+/call show_pin B 5
+/call show_pin B 6
+/call show_pin B 7
+
+/call show_pin C 0
+/call show_pin C 1
+/call show_pin C 2
+/call show_pin C 4
+/call show_pin C 5
+/call show_pin C 6
+/call show_pin C 7
+
          end

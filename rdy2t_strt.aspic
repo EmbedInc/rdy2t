@@ -245,10 +245,15 @@ relstart unbank
          gcallnr task_init   ;init multi-tasking system
          gcallnr prom_init   ;init low level EEPROM handler
          gcallnr name_init   ;init user-settable name handling
+
 /if enab_usb then
          gcallnr cmd_init    ;init host command processing
          gcallnr usb_init    ;init USB handler
          gcallnr usb0_init   ;init USB endpoint 0 request processing
+  /endif
+
+/if enab_bitsam then
+         gcallnr bitsam_init ;init live bit sampling module
   /endif
 
          gcallnr intr_init   ;init interrupt management and enable interrupts

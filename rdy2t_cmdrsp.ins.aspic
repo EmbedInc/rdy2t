@@ -28,6 +28,22 @@
 
 //******************************************************************************
 //
+//   Set all the optional feature enable switches used here to TRUE, unless they
+//   are already set.  This causes the full set of commands and responses to be
+//   written to different languages by the generic CMDRSP module.  For use by
+//   this firmware directly, this file is included from the main project include
+//   file after the feature-enable switches have already been set.
+//
+//   The net result is that only the enabled commands are visible in the
+//   firmware itself, but files for use by external routines define the full set
+//   of commands.
+//
+/if [not [exist "enab_bitsam:const"]] then
+  /const enab_bitsam bool = true
+  /endif
+
+//******************************************************************************
+//
 //   Command opcodes.
 //
 //   These are string constants named cmd_<commandname>.  Their contents is:
@@ -54,6 +70,9 @@
 /const   cmd_nameset = 3     ;set user-settable device name, ignored
 /const   cmd_nameget = 4     ;get device name, fixed from DEVNAME constant
 /const   cmd_getcmds = "5 cmd_getcmds" ;get set of implemented commands
+/if enab_bitsam then
+  /const cmd_bitsam = 6      ;enable/disable live bit sampling
+  /endif
 
 //******************************************************************************
 //
@@ -67,3 +86,4 @@
 /const   rsp_fwinfo integer = 2 ;firmware type, version, and sequence
 /const   rsp_name integer = 3 ;reports unit name string
 /const   rsp_cmds integer = 4 ;implemented/unimplemented status for each command
+/const   rsp_bitsam integer = 5 ;sampled bit values

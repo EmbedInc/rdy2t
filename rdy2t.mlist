@@ -1,3 +1,4 @@
+rdy2t_bitsam.o
 rdy2t_cmds.o
 rdy2t_cmdusb.o
 rdy2t_init.o

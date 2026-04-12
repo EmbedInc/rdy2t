@@ -21,6 +21,7 @@
 /const   srcdir  = "qprot"   ;top level SOURCE directory name
 /const   buildname = "rdy2t" ;name of subdirectory within top level SOURCE dir
 /const   fwtype  integer = 76 ;unique ID for this firmware
+/const   fifos_new bool = true ;use new-style FIFO macros
 
 /include "(cog)src/pic/std_def.ins.aspic"
 /include "(cog)src/pic/fwtype.ins.aspic"

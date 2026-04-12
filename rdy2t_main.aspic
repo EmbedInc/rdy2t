@@ -91,6 +91,37 @@ usb10ms  res     1           ;10 ms clock USB is up to date with
 no_usbreset
   /endif
 ;
+;   Send a BITSAM response if there is at least one run available.
+;
+/if enab_bitsam then
+         gcall   bitsam_nrun ;get number of runs available now into REG0
+         movf    reg0
+         skip_nz             ;there is at least one run available ?
+         jump    d_bitsam    ;no, nothing to do
+         movff   reg0, reg1  ;init number of data bytes left to send
+
+         gcall   cmd_lock_out ;acquire lock on response stream to host
+         loadk8  reg0, [v rsp_bitsam] ;send BITSAM response opcode
+         gcall   cmd_put8
+
+         decf    reg1, w     ;send number of runs - 1
+         movwf   reg0
+         gcall   cmd_put8
+
+bitsam_run unbank            ;back here each new run to send
+         gcall   bitsam_get  ;get this run info into REG0
+         rrncf   reg0        ;change to BITSAM response format
+         gcall   cmd_put8    ;send this run
+         decfsz  reg1        ;count one less run left to do
+         jump    bitsam_run  ;back to do the next run
+
+         gcall   cmd_unlock_out ;release lock on response stream to host
+         jump    loop_main
+
+d_bitsam unbank
+  /endif                     ;end of sending BITSAM response
+
+;
 ;   Notify the USB routines of any new elapsed time.  This is used to detect
 ;   wedged USB hardware, in which case the processor is reset.
 ;

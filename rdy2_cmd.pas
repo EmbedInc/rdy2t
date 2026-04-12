@@ -7,20 +7,21 @@
 }
 module rdy2_cmd;
 
-define rdy_cmdimpl;
+define rdy2_cmdimpl;
 define rdy2_cmd_nop;
 define rdy2_cmd_ping;
 define rdy2_cmd_fwinfo;
 define rdy2_cmd_nameset;
 define rdy2_cmd_nameget;
 define rdy2_cmd_getcmds;
+define rdy2_cmd_bitsam;
 
 %include 'rdy2_2.ins.pas';
 %include 'rdy2t_cmdrsp.ins.pas';       {command and response opcode definitions}
 {
 ********************************************************************************
 *
-*   Function RDY_CMDIMPL (RDY, CMD)
+*   Function RDY2_CMDIMPL (RDY, CMD)
 *
 *   Returns TRUE iff the command with opcode CMD is implemented.
 }
@@ -130,5 +131,35 @@ procedure rdy2_cmd_getcmds (           {send GETCMDS command}
 begin
   rdy2_show_lock (rdy);
   rdy2_send8 (rdy, cmd_getcmds_k, stat);
+  rdy2_show_unlock (rdy);
+  end;
+{
+********************************************************************************
+}
+procedure rdy2_cmd_bitsam (            {send BITSAM command}
+  in out  rdy: rdy2_t;                 {library use state}
+  in      on: boolean;                 {switch the feature on}
+  out     stat: sys_err_t);            {completion status}
+  val_param;
+
+var
+  onoff: sys_int_machine_t;            {command parameter}
+
+label
+  abort;
+
+begin
+  if                                   {this command is not implemented ?}
+      rdy2_err_cmdnimpl (rdy, 'BITSAM', cmd_bitsam_k, stat)
+    then return;
+
+  onoff := 0;                          {init to off}
+  if on then onoff := 1;               {set to on if so enabled}
+
+  rdy2_show_lock (rdy);
+  rdy2_send8 (rdy, cmd_bitsam_k, stat); {BITSAM command opcode}
+  if sys_error(stat) then goto abort;
+  rdy2_send8 (rdy, onoff, stat);
+abort:                                 {to here on error when lock held}
   rdy2_show_unlock (rdy);
   end;

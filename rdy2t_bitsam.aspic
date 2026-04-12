@@ -1,0 +1,215 @@
+;   ***************************************************************
+;   * Copyright (C) 2010, Embed Inc (http://www.embedinc.com)     *
+;   *                                                             *
+;   * Permission to copy this file is granted as long as this     *
+;   * copyright notice is included in its entirety at the         *
+;   * beginning of the file, whether the file is copied in whole  *
+;   * or in part and regardless of whether other information is   *
+;   * added to the copy.                                          *
+;   *                                                             *
+;   * The contents of this file may be used in any way,           *
+;   * commercial or otherwise.  This file is provided "as is",    *
+;   * and Embed Inc makes no claims of suitability for a          *
+;   * particular purpose nor assumes any liability resulting from *
+;   * its use.                                                    *
+;   ***************************************************************
+;
+;   FIFO data format
+;
+;     Each data byte in the FIFO describes one run of bits all the same value.
+;     The low bit of each byte is the bit value for the run, and the high 7 bits
+;     are the number of bits in the run - 1.  Runs are therefore from 1 to 128
+;     bits long.
+;
+/include "rdy2t.ins.aspic"
+
+/if [not enab_bitsam] then   ;the feature provided by this module is disabled ?
+         end
+  /stop
+  /endif
+
+         extern_flags        ;declare global flag bits EXTERN
+
+;*******************************************************************************
+;
+;   Configuration constants.
+;
+/const   fifosz  integer = 32 ;FIFO size, max data bytes it can hold
+
+;*******************************************************************************
+;
+;   Local state.
+;
+.bitsam_ram udata            ;allow linker to assign our RAM block as fits
+
+bitsam   fifo_define [v fifosz] ;define the FIFO structures
+lastv    res     1           ;last input value in low bit
+rlen     res     1           ;0-128 number of samples at the last value
+dat      res     1           ;data byte for FIFO
+
+
+.bitsam  code
+;*******************************************************************************
+;
+;   Subroutine BITSAM_INIT
+;
+;   Initialize the hardware and software state managed by this module.
+;
+bitsam_init glbsub
+
+         banksel bitsam
+         fifo_init bitsam
+
+         leaverest
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//   Macro RUN_FINISH
+//
+//   Finish the current run.  The existing run must be from 0 to 128 bits long.
+//   The current run length is reset to 0.
+//
+//   The current run is pushed onto the FIFO.  The current bank must be set for
+//   accessing the local state.
+//
+//   FSR0 is trashed.
+//
+/macro run_finish
+         movf    rlen        ;nothing to do when run length is 0
+         bz      [lab drun]
+
+         fifo_br_full bitsam, 0, [lab dpush] ;no place to put this run ?
+
+         decf    rlen, w     ;get run length - 1
+         movwf   dat         ;init DAT byte with run length - 1
+         rrcf    lastv, w    ;get bit value into C
+         rlcf    dat         ;assemble full FIFO byte
+         fifo_put bitsam, dat ;push this run onto the FIFO
+[lab dpush] ;
+         clrf    rlen        ;reset the current run length
+[lab drun]
+  /endmac
+
+;*******************************************************************************
+;
+;   Routine BITSAM_INTR
+;
+;   Sample the input pin and update state accordingly.
+;
+;   This routine is run from the main interrupt code, and jumps to
+;   BITSAM_INTR_DONE when done.  It must only be run when the global flag BITSAM
+;   is set, indicating that the bit sampling mechanism is on.
+;
+;   FSR0 is trashed.
+;
+         extern  bitsam_intr_done ;jump here to return from this routine
+
+         glbent  bitsam_intr
+
+         skip_bitsam_off     ;sample the input pin now
+         jump    samp1       ;pin state is 1 ?
+;
+;   The input pin state is 0.
+;
+         banksel bitsam
+         btfss   lastv, 0    ;different from previous state ?
+         jump    samp_runcont ;no, continue existing run
+         ;
+         ;   This sample starts a new run of 0s.
+         ;
+         run_finish          ;end the existing run, reset run length to 0
+         bcf     lastv, 0    ;indicate the new run is 0s
+         incf    rlen        ;add this sample to the new run
+         gjump   bitsam_intr_done
+;
+;   The input pin state is 1.
+;
+samp1
+         banksel bitsam
+         btfsc   lastv, 0    ;different from previous state ?
+         jump    samp_runcont ;no, continue existing run
+         ;
+         ;   This sample starts a new run of 1s.
+         ;
+         run_finish          ;end the existing run, reset run length to 0
+         bsf     lastv, 0    ;indicate the new run is 1s
+         incf    rlen        ;add this sample to the new run
+         gjump   bitsam_intr_done
+;
+;   The input pin state continues the existing run.
+;
+samp_runcont
+         incf    rlen        ;add this sample to the existing run
+         movf    rlen, w     ;get new run length
+         sublw   127         ;compare to highest not-full value
+         skip_wle            ;still room in run for another bit ?
+         jump    samp_runmax ;no, run is at maximum length
+         gjump   bitsam_intr_done
+         ;
+         ;   The current run is at its maximum representable length.
+         ;
+samp_runmax
+         run_finish          ;send run, reset run length to 0
+         gjump   bitsam_intr_done
+
+;*******************************************************************************
+;
+;   Subroutine BITSAM_NRUN
+;
+;   Returns REG0 the number of runs that are immediately available in the FIFO.
+;   BITSAM_GET can safely be called that many times to get valid data and
+;   without underrunning the FIFO.
+;
+         glbsub  bitsam_nrun
+
+         banksel bitsam      ;set bank for access to the FIFO
+         fifo_n_full bitsam  ;get number of bytes in the FIFO into W
+         movwf   reg0        ;pass back numbr of runs immediately available
+
+         leaverest
+
+;*******************************************************************************
+;
+;   Subroutine BITSAM_GET
+;
+;   Get the descriptor for the next run from the FIFO.  The FIFO must not be
+;   empty.  It is the caller's responsibility to check this by calling
+;   BITSAM_NRUN first.
+;
+         glbsub  bitsam_get
+
+         banksel bitsam      ;set bank for access to the FIFO
+         fifo_get bitsam, reg0 ;get next byte from the FIFO into REG0
+
+         leaverest
+
+;*******************************************************************************
+;
+;   Command BITSAM on
+;
+;   Switch the bit sampling mechanism on or off.  ON of 1 turns on the mechanism
+;   and 0 turns it off.  All other values are undefined.
+;
+/if [Command cm_bitsam] then
+         gcall   cmd_get8    ;get ON into REG0
+         btfsc   reg0, 0
+         jump    bsam_on     ;turn on bit sampling
+         ;
+         ;   Turn off bit sampling.
+         ;
+         clrflag bitsam      ;insure no new samples
+         banksel bitsam
+         run_finish          ;send any run that was in progress
+         return
+         ;
+         ;   Turn on bit sampling.
+         ;
+bsam_on  unbank
+         banksel bitsam
+         clrf    rlen        ;init to no samples in current run
+         setflag bitsam
+         return
+
+  /endif                     ;end of BITSAM command
+
+         end

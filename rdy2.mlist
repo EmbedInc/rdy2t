@@ -1,4 +1,5 @@
 rdy2_cmd.obj
+rdy2_err.obj
 rdy2_in.obj
 rdy2_lib.obj
 rdy2_name.obj

@@ -17,7 +17,7 @@ program test_rdy2;
 
 const
   datar_size = 256;                    {number of entries in DATAR}
-  n_cmdnames_k = 9;                    {number of command names in the list}
+  n_cmdnames_k = 10;                   {number of command names in the list}
   cmdname_maxchars_k = 7;              {max chars in any command name}
   max_msg_parms = 2;                   {max parameters we can pass to a message}
   fwname = 'rdy2t';                    {firmware name, for making map file name}
@@ -45,6 +45,7 @@ var
     'SHOW   ',                         {7}
     'NAME   ',                         {8}
     'IMPL   ',                         {9}
+    'BSAM   ',                         {10}
     ];
 
 var
@@ -336,6 +337,7 @@ loop_cmd:
   writeln ('FWINFO         - Request firmware version info');
   writeln ('NAME [name]    - Get or set device name');
   writeln ('IMPL           - Update list of implemented commands');
+  writeln ('BSAM onoff     - Live input bit sampling on/off');
 
   writeln ('Q or QUIT      - Exit the program');
   unlockout;                           {release lock for writing to output}
@@ -434,6 +436,18 @@ otherwise
   if not_eos then goto err_extra;
 
   rdy2_cmd_getcmds (rdy_p^, stat);
+  end;
+{
+**********
+*
+*   BSAM onoff
+}
+10: begin
+  b1 := next_onoff (stat);             {get ONOFF into B1}
+  if sys_error(stat) then goto err_cmparm;
+  if not_eos then goto err_extra;
+
+  rdy2_cmd_bitsam (rdy_p^, b1, stat);
   end;
 {
 **********

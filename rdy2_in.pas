@@ -20,7 +20,10 @@ procedure rdy2_in (                    {thread that receives all input from remo
   val_param;
 
 const
+  datar_size = 256;                    {number of entries DATAR configured for}
+
   chunklast = chunksize - 1;           {last valid input buffer index}
+  datar_last = datar_size - 1;         {last valid DATAR index}
 
 var
   ibuf:                                {raw input buffer}
@@ -33,12 +36,15 @@ var
   tk: string_var80_t;                  {scratch token}
   tk2: string_var32_t;
   rsp: sys_int_machine_t;              {response opcode}
+  datar:                               {scratch array for processing responses}
+    array[0..datar_last] of sys_int_machine_t;
+  datarn: sys_int_machine_t;           {number of entries in DATAR}
   call_p: rdy2_fwinfo_call_p_t;        {to FWINFO response callback routine}
 
 label
   loop;
 {
-******************************
+****************************************
 *
 *   Function IBYTE
 *   This function is local to RDY2_IN.
@@ -82,7 +88,7 @@ begin
   ibufn := ibufn - 1;                  {count one less byte left in the buffer}
   end;
 {
-******************************
+****************************************
 *
 *   Function GETI16U
 *   This function is local to RDY2_IN.
@@ -103,7 +109,7 @@ begin
   end;
 *)
 {
-******************************
+****************************************
 *
 *   Function GETI24U
 *   This function is local to RDY2_IN.
@@ -125,7 +131,26 @@ begin
   end;
 *)
 {
-******************************
+****************************************
+*
+*   Subroutine DATAR_ADD (V)
+*
+*   Add the value V as the next word in the scratch data array DATAR.  DATARN is
+*   updated to indicate the number of entries in DATAR.  Nothing is done if the
+*   array is already full.
+}
+procedure datar_add (                  {add value to DATAR array}
+  in      v: sys_int_machine_t);       {the value to add}
+  val_param; internal;
+
+begin
+  if datarn < datar_size then begin    {array isn't already full ?}
+    datar[datarn] := v;                {stuff this value into the array}
+    datarn := datarn + 1;              {count one more value in the array}
+    end;
+  end;
+{
+****************************************
 *
 *   Executable code for RDY2_IN.
 }
@@ -140,8 +165,11 @@ loop:                                  {back here to process each new response}
   if rsp <> rsp_nop_k then begin       {this is not a NOP response ?}
     nnop := 0;                         {reset number of consecutive NOPs received}
     end;
+  datarn := 0;                         {initialize DATAR to empty for this response}
   case rsp of                          {which response is it ?}
 {
+******************************
+*
 *   NOP
 }
 rsp_nop_k: begin
@@ -153,6 +181,8 @@ rsp_nop_k: begin
     end;
   end;
 {
+******************************
+*
 *   PONG
 }
 rsp_pong_k: begin
@@ -169,6 +199,8 @@ rsp_pong_k: begin
   rdy.show_pong := rdy.show_rsp;       {reset to show next PONG according to SHOW_RSP}
   end;
 {
+******************************
+*
 *   FWINFO type version sequence
 }
 rsp_fwinfo_k: begin
@@ -202,6 +234,8 @@ otherwise
     end;
   end;
 {
+******************************
+*
 *   NAME n name
 }
 rsp_name_k: begin
@@ -220,6 +254,8 @@ rsp_name_k: begin
     end;
   end;
 {
+******************************
+*
 *   CMDS dat0 ... dat31
 }
 rsp_cmds_k: begin
@@ -246,6 +282,33 @@ rsp_cmds_k: begin
     end;
   end;
 {
+******************************
+*
+*   BITSAM n run ... run
+}
+rsp_bitsam_k: begin
+  i1 := ibyte + 1;                     {get number of runs}
+
+  for ii := 1 to i1 do begin           {get all the runs into DATAR}
+    datar_add (ibyte);
+    end;
+
+  if rdy.show_rsp then begin
+    rdy2_show_lock (rdy);
+    write ('Bit samples:');
+    for ii := 0 to datarn-1 do begin   {once for each run}
+      jj := datar[ii];                 {get descriptor for this run}
+      i1 := rshft(jj, 7);              {get 0/1 run value}
+      i2 := (jj & 16#7F) + 1;          {get length of this run}
+      write (' ', i2, 'x', i1);        {show this run}
+      end;
+    writeln;
+    rdy2_show_unlock (rdy);
+    end;
+  end;
+{
+******************************
+*
 *   Unrecognized opcode.
 }
 otherwise
