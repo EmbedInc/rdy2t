@@ -33,6 +33,8 @@ type
   rdy2_bitsam_t = record               {state related to live bit sampling feature}
     fifo_p: string_fifo_p_t;           {FIFO of same-value runs}
     inv: boolean;                      {invert the sampled 0/1 data}
+    runval: sys_int_machine_t;         {0 or 1 run value, polarity applied}
+    runlen: sys_int_machine_t;         {number of bits remaining in run}
     end;
 
   rdy2_p_t = ^rdy2_t;
@@ -70,6 +72,11 @@ type
 *
 *   Entry points.
 }
+function rdy2_bitsam_bit (             {get next BITSAM bit, unpack runs as needed}
+  in out  rdy: rdy2_t)                 {library use state}
+  :sys_int_machine_t;                  {0 or 1 bit value, polarity applied}
+  val_param; extern;
+
 procedure rdy2_bitsam_clear (          {clear any existing bit sampled data}
   in out  rdy: rdy2_t);                {library use state}
   val_param; extern;

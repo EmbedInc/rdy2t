@@ -176,6 +176,8 @@ begin
     rdy2_bitsam_sz,                    {max bytes FIFO can hold}
     rdy_p^.bitsam.fifo_p);             {returned pointer to the new FIFO}
   rdy_p^.bitsam.inv := false;          {init to not invert bit sample data}
+  rdy_p^.bitsam.runval := 0;
+  rdy_p^.bitsam.runlen := 0;
 {
 *   Start the thread that receives and processes the response stream from the
 *   remote unit.

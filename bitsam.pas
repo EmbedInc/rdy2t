@@ -59,8 +59,6 @@ var
   lastsn: sys_int_machine_t;           {number of samples in LASTS}
   lastsind: sys_int_machine_t;         {LASTS index of most recent sample}
   ii, jj: sys_int_machine_t;           {scratch integers and loop counters}
-  runval: sys_int_machine_t;           {0 or 1 value of run being unpacked}
-  runl: sys_int_machine_t;             {number of bits left in current run}
   datst: datst_t;                      {state for detecting start sequence}
   daten: daten_t;                      {state for detecting end sequence}
   trig_st, trig_en: boolean;           {start and end sequences detected}
@@ -157,17 +155,7 @@ procedure get_sample;
   internal;
 
 begin
-{
-*   Get a new run if the current run is exhausted.
-}
-  if runl <= 0 then begin              {there is no active current run ?}
-    rdy2_bitsam_run (rdy_p^, runval, runl); {get next run}
-    end;
-{
-*   Update the state to the new sample.
-}
-  samp := runval;                      {get value from this run}
-  runl := runl - 1;                    {one less sample left in this run}
+  samp := rdy2_bitsam_bit (rdy_p^);    {get the next bit sample}
 
   if sampn >= 0 then sampn := sampn + 1; {update sequential sample number}
 {
@@ -301,8 +289,6 @@ otherwise
   trig_st := false;                    {start sequence not detected yet}
   trig_en := false;                    {end sequence not detected yet}
   sampn := -1;                         {init sample number to before trigger}
-
-  runl := 0;                           {there is no current run}
   {
   *   Init start sequence detection state.
   }

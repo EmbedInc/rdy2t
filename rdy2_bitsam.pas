@@ -4,6 +4,7 @@ module rdy2_bitsam;
 define rdy2_bitsam_polarity;
 define rdy2_bitsam_clear;
 define rdy2_bitsam_run;
+define rdy2_bitsam_bit;
 %include 'rdy2_2.ins.pas';
 {
 ********************************************************************************
@@ -72,4 +73,33 @@ begin
     end;
 
   len := (run & 16#7F) + 1;            {number of samples in this run}
+  end;
+{
+********************************************************************************
+*
+*   Function RDY2_BITSAM_BIT (RDY)
+*
+*   Get the next live sampled bit.  Sampled bit data is sent from the remote
+*   unit to the computer in runs.  This routine returns the next sequential bit,
+*   getting and unpacking runs as needed.  The bit polarity set with
+*   RDY2_BITSAM_POLARITY is applied to the returned bit.
+*
+*   Results are not defined when the application gets runs directly in addition
+*   to calling this routine since the last CLEAR.  When this routine is in use,
+*   it should be considered to "own" incoming runs.
+*
+*   This routine blocks until the next bit value is available.
+}
+function rdy2_bitsam_bit (             {get next BITSAM bit, unpack runs as needed}
+  in out  rdy: rdy2_t)                 {library use state}
+  :sys_int_machine_t;                  {0 or 1 bit value, polarity applied}
+  val_param;
+
+begin
+  if rdy.bitsam.runlen <= 0 then begin {there is no current run ?}
+    rdy2_bitsam_run (rdy, rdy.bitsam.runval, rdy.bitsam.runlen); {get the next run}
+    end;
+
+  rdy2_bitsam_bit := rdy.bitsam.runval; {pass back bit value}
+  rdy.bitsam.runlen := rdy.bitsam.runlen - 1; {one less bit left in current run}
   end;
